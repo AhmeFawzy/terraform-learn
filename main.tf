@@ -1,74 +1,159 @@
 provider "aws" {
-    region = "us-east-1"
-    #access_key = "AKIAV6TNO4KJMB7SJUSH"  this should not be hardcorded
-    #secret_key = "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"  this should not be hardcorded
+  region = "eu-central-1"
 }
 
-variable "subnet_cidr_block" {
+variable vpc_cidr_block {}
+variable subnet_1_cidr_block {}
+variable avail_zone {}
+variable env_prefix {}
+variable instance_type {}
+variable ssh_key {}
+variable my_ip {}
 
-    description = "subnet cidr block"
-    default = "10.0.10.0/24" #the default value will be used in case the custom value for the variable not found in the variable file or in the block below or defined in the command line parameter (understand?)
-    type = string            # in most cases you will not have to define a type for the varible but it is rarly used 
-}   
-# if you left the variable without a type the user can put any type they want
-variable "cidr_blocks" {
-    description ="cidr blocks for vpc and subnet"
-    type = list (object({
-        cidr_block = string
-        name = string
-    }))
+data "aws_ami" "amazon-linux-image" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
 }
 
-variable "vpc_cidr_block" {
-
-    description = "vpc cidr block"
+output "ami_id" {
+  value = data.aws_ami.amazon-linux-image.id
 }
 
-variable "environment" {
-
-    description = "deployment environment"
+resource "aws_vpc" "myapp-vpc" {
+  cidr_block = var.vpc_cidr_block
+  tags = {
+      Name = "${var.env_prefix}-vpc"
+  }
 }
 
-variable vail_zone {}
-
-resource "aws_vpc" "development-vpc" {
-
-    cidr_block = var.vpc_cidr_block  #or cidr_blocks =var.cidr_blocks[0].cidr_block
-    tags = {
-        Name: "development"  # or you can access it by cidr_blocks variable var.cidr_blocks[0].name
-        vpc_env: "dev"
-    }
+resource "aws_subnet" "myapp-subnet-1" {
+  vpc_id = aws_vpc.myapp-vpc.id
+  cidr_block = var.subnet_1_cidr_block
+  availability_zone = var.avail_zone
+  tags = {
+      Name = "${var.env_prefix}-subnet-1"
+  }
 }
-#terraform destroy -target aws_sybnet.dev-sybnet-2 >> to delete the next resource
-resource "aws_subnet" "dev-subnet-1" {
-#subnet belongs to a vpc so you shuold specify to which one it belongs
+
+resource "aws_security_group" "myapp-sg" {
+  name   = "myapp-sg"
+  vpc_id = aws_vpc.myapp-vpc.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.my_ip]
+  }
+
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks     = ["0.0.0.0/0"]
+    prefix_list_ids = []
+  }
+
+  tags = {
+    Name = "${var.env_prefix}-sg"
+  }
+}
+
+resource "aws_internet_gateway" "myapp-igw" {
+	vpc_id = aws_vpc.myapp-vpc.id
     
-    vpc_id = aws_vpc.development-vpc.id
-    cidr_block = "10.0.10.0/24"     #or   cidr_block = var.subnet_cider_block >> the variable that we defined  #or cidr_blocks =var.cidr_blocks[1].cidr_block
-    availability_zone = "us-east-1a"
     tags = {
-        Name: "subnet-1-dev" #you can access it by cidr_blocks variable var.cidr_blocks[1].name
-    }
-} 
-
-data "aws_vpc" "existing_vpc" {
-    default = true 
+     Name = "${var.env_prefix}-internet-gateway"
+   }
 }
 
-resource "aws_subnet" "dev-subnet-2" {
-    vpc_id = data.aws_vpc.existing_vpc.id
-    cidr_block = "172.31.160.0/20"
-    availability_zone = "us-east-1a"  #or var.avail_zone but first you need to run and save your custom env of variable export TF_VAR_avail_zone="eu-west-3a"
-    tags = {
-        Name: "subnet-2-default"
-    }
+resource "aws_route_table" "myapp-route-table" {
+   vpc_id = aws_vpc.myapp-vpc.id
+
+   route {
+     cidr_block = "0.0.0.0/0"
+     gateway_id = aws_internet_gateway.myapp-igw.id
+   }
+
+   # default route, mapping VPC CIDR block to "local", created implicitly and cannot be specified.
+
+   tags = {
+     Name = "${var.env_prefix}-route-table"
+   }
+ }
+
+# Associate subnet with Route Table
+resource "aws_route_table_association" "a-rtb-subnet" {
+  subnet_id      = aws_subnet.myapp-subnet-1.id
+  route_table_id = aws_route_table.myapp-route-table.id
 }
 
-output "dev-vpc-id" {
-   value = aws_vpc.development-vpc.id
+resource "aws_key_pair" "ssh-key" {
+  key_name   = "myapp-key"
+  public_key = file(var.ssh_key)
 }
 
-output "dev-subnet-id" {
-   value = aws_subnet.dev-subnet-1.id
+output "server-ip" {
+    value = aws_instance.myapp-server.public_ip
 }
 
+resource "aws_instance" "myapp-server" {
+  ami                         = data.aws_ami.amazon-linux-image.id
+  instance_type               = var.instance_type
+  key_name                    = "myapp-key"
+  associate_public_ip_address = true
+  subnet_id                   = aws_subnet.myapp-subnet-1.id
+  vpc_security_group_ids      = [aws_security_group.myapp-sg.id]
+  availability_zone			      = var.avail_zone
+
+  tags = {
+    Name = "${var.env_prefix}-server"
+  }
+
+  user_data = <<EOF
+                 #!/bin/bash
+                 apt-get update && apt-get install -y docker-ce
+                 systemctl start docker
+                 usermod -aG docker ec2-user
+                 docker run -p 8080:8080 nginx
+              EOF
+}
+
+resource "aws_instance" "myapp-server-two" {
+  ami                         = data.aws_ami.amazon-linux-image.id
+  instance_type               = var.instance_type
+  key_name                    = "myapp-key"
+  associate_public_ip_address = true
+  subnet_id                   = aws_subnet.myapp-subnet-1.id
+  vpc_security_group_ids      = [aws_security_group.myapp-sg.id]
+  availability_zone			      = var.avail_zone
+
+  tags = {
+    Name = "${var.env_prefix}-server-two"
+  }
+
+  user_data = <<EOF
+                 #!/bin/bash
+                 apt-get update && apt-get install -y docker-ce
+                 systemctl start docker
+                 usermod -aG docker ec2-user
+                 docker run -p 8080:8080 nginx
+              EOF
+}
