@@ -23,7 +23,7 @@ data "aws_ami" "amazon-linux-image" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
-}
+} 
 
 output "ami_id" {
   value = data.aws_ami.amazon-linux-image.id
@@ -109,7 +109,7 @@ resource "aws_default_security_group" "default-sg" {
     Name = "${var.env_prefix}-default-sg"
   }
 }
-
+ 
 */
 
 resource "aws_internet_gateway" "myapp-igw" {
@@ -157,20 +157,21 @@ resource "aws_route_table_association" "a-rtb-subnet" {
   route_table_id = aws_route_table.myapp-route-table.id
 }
 
-resource "aws_key_pair" "ssh-key" {
+resource "aws_key_pair" "ssh-key" {  //this resource is to avoid manual creating key pair and downloading it then using it while ssh the ec2 instance (remember?)
   key_name   = "myapp-key"
   public_key = file(var.ssh_key)
+  // public_key = var.my_ip     >> this is just an alternative for the previous line
 }
 
-output "server-ip" {
+output "server-ip" {          
     value = aws_instance.myapp-server.public_ip
 }
 
 resource "aws_instance" "myapp-server" {
-  ami                         = data.aws_ami.amazon-linux-image.id
+  ami                         = data.aws_ami.amazon-linux-image.id    //the operating system image that ec2 instance will be based on 
   instance_type               = var.instance_type
-  key_name                    = "myapp-key"
-  associate_public_ip_address = true
+  key_name                    = aws_key_pair.ssh-key.key_name // or hard code it > "my-key-pair"
+  associate_public_ip_address = true  //we want to access this from browser so we need public ip address
   subnet_id                   = aws_subnet.myapp-subnet-1.id
   vpc_security_group_ids      = [aws_security_group.myapp-sg.id]
   availability_zone			      = var.avail_zone
@@ -201,11 +202,5 @@ resource "aws_instance" "myapp-server-two" {
     Name = "${var.env_prefix}-server-two"
   }
 
-  user_data = <<EOF
-                 #!/bin/bash
-                 apt-get update && apt-get install -y docker-ce
-                 systemctl start docker
-                 usermod -aG docker ec2-user
-                 docker run -p 8080:8080 nginx
-              EOF
-}
+  user_data =  file("entry-script.sh")
+} 
