@@ -115,23 +115,24 @@ resource "aws_instance" "myapp-server" {
 
     # user_data = file("entry-script.sh")
 
-    connection {
+    connection {       //this is to connect to the ec2 server
         type = "ssh"
         host = self.public_ip
         user = "ec2-user"
         private_key = file(var.private_key_location)
     }
 
-    provisioner "file" {
+    provisioner "file" {  // this made to copy files from our local machine to the newly created resource (ec2 instance server)
         source = "entry-script.sh"
-        destination = "/home/ec2-user/entry-script-on-ec2.sh"
+        destination = "/home/ec2-user/entry-script-on-ec2.sh"  // we copied the file and changed its name 
     }
 
     provisioner "remote-exec" {
-        script = file("entry-script.sh")
+        script = file("entry-script-on-ec2.sh")  // this file must be existing on server to be able to excute it and we write the file name on the server itself
+
     }
 
-    provisioner "local-exec" {
+    provisioner "local-exec" {  // commands that will be excuted locallly 
         command = "echo ${self.public_ip} > output.txt"
     }
 
