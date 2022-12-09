@@ -22,7 +22,7 @@ module "eks" {
 
   subnets = module.flokiapp-vpc.private_subnets // this is where our workload will be scheduled
   vpc_id = module.flokiapp-vpc.vpc_id
-
+  
   tags = {
     environment = "development"
     application = "flokiapp"
