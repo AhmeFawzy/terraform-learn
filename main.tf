@@ -115,9 +115,9 @@ resource "aws_instance" "myapp-server" {
 
     # user_data = file("entry-script.sh")
 
-    connection {       //this is to connect to the ec2 server
+    connection {       //this is to connect terraform to the ec2 server to excute the commands below 
         type = "ssh"
-        host = self.public_ip
+        host = self.public_ip  // refers to the current object which is the instance itself
         user = "ec2-user"
         private_key = file(var.private_key_location)
     }
