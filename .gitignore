@@ -6,5 +6,5 @@
 *.tfstate.*
 
 #tf variable files, may include sesitive date 
-*.tfvars
+
 
