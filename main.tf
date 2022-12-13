@@ -200,7 +200,7 @@ resource "aws_instance" "myapp-server-two" {
   availability_zone			      = var.avail_zone
 
   tags = {
-    Name = "${var.env_prefix}-server-two"
+    Name = "${var.env_prefix}-server-two"  // hna we wrote it as "${}-string"  because it includes a string and a variable so we wrote it this way.. look like 162 there it is only variable so we did not write the "$"
   }
 
   user_data =  file("entry-script.sh")
