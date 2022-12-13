@@ -26,6 +26,6 @@ module "myapp-server" {
     image_name = var.image_name
     public_key_location = var.public_key_location
     instance_type = var.instance_type
-    subnet_id = module.myapp-subnet.subnet.id
+    subnet_id = module.myapp-subnet.subnet.id   // module.<name-module>.<output-name>.id
     avail_zone = var.avail_zone
 }
