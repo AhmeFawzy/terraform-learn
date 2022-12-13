@@ -4,4 +4,5 @@ avail_zone =
 env_prefix =
 instance_type =
 ssh_key =
-my_ip =
+private_key_location =
+public_key_location =
