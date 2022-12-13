@@ -192,7 +192,8 @@ resource "aws_instance" "myapp-server" {
 resource "aws_instance" "myapp-server-two" {
   ami                         = data.aws_ami.amazon-linux-image.id
   instance_type               = var.instance_type
-  key_name                    = "myapp-key"
+  key_name                    = aws_key_pair.ssh_key.key_name
+  //key_name                  = ".pemfile name"  >> you can hardcode it witht he file name you created in the aws but the above is the best practice 
   associate_public_ip_address = true
   subnet_id                   = aws_subnet.myapp-subnet-1.id
   vpc_security_group_ids      = [aws_security_group.myapp-sg.id]
