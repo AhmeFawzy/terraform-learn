@@ -133,7 +133,7 @@ resource "aws_instance" "myapp-server" {
     }
 
     provisioner "local-exec" {  // commands that will be excuted locallly 
-        command = "echo ${self.public_ip} > output.txt"
+        command = "echo ${self.public_ip} > output.txt" // it prints the ip of the ec2 and safe it into a file 
     }
 
     tags = {
