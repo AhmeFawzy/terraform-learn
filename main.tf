@@ -9,6 +9,7 @@ variable env_prefix {}
 variable instance_type {}
 variable ssh_key {}
 variable my_ip {}
+//variable ssh_key_private {}
 
 data "aws_ami" "amazon-linux-image" {
   most_recent = true
@@ -31,6 +32,7 @@ output "ami_id" {
 
 resource "aws_vpc" "myapp-vpc" {
   cidr_block = var.vpc_cidr_block
+  enable_dns_hostnames = true
   tags = {
       Name = "${var.env_prefix}-vpc"
   }
@@ -56,13 +58,6 @@ resource "aws_security_group" "myapp-sg" {
     cidr_blocks = [var.my_ip]
   }
 
-  ingress {
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   egress {
     from_port       = 0
     to_port         = 0
@@ -75,42 +70,6 @@ resource "aws_security_group" "myapp-sg" {
     Name = "${var.env_prefix}-sg"
   }
 }
-
-#how to use the default security group insted of creating a new one 
-
-/*
-
-resource "aws_default_security_group" "default-sg" {
-  vpc_id = aws_vpc.myapp-vpc.id
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.my_ip]
-  }
-
-  ingress {
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port       = 0
-    to_port         = 0
-    protocol        = "-1"
-    cidr_blocks     = ["0.0.0.0/0"]
-    prefix_list_ids = []
-  }
-
-  tags = {
-    Name = "${var.env_prefix}-default-sg"
-  }
-}
-
-*/
 
 resource "aws_internet_gateway" "myapp-igw" {
 	vpc_id = aws_vpc.myapp-vpc.id
@@ -131,25 +90,9 @@ resource "aws_route_table" "myapp-route-table" {
    # default route, mapping VPC CIDR block to "local", created implicitly and cannot be specified.
 
    tags = {
-     Name = "${var.env_prefix}-route-table"
+     Name = "${var.env_prefix}-route-table-test"
    }
  }
-
-/*
-resourece "aws_default_route_table" "main-rtb"{
-
-  default_route_table_id = aws_vpc.myapp-vpc.default_route_table_id
-  route {
-     cidr_block = "0.0.0.0/0"
-     gateway_id = aws_internet_gateway.myapp-igw.id
-   }
-   tags = {
-    Name: "${var.env_prefix}-main-rtb"
-   }
-
-}
-
-*/
 
 # Associate subnet with Route Table
 resource "aws_route_table_association" "a-rtb-subnet" {
@@ -178,16 +121,8 @@ resource "aws_instance" "myapp-server" {
   tags = {
     Name = "${var.env_prefix}-server"
   }
-
-  user_data = <<EOF
-                 #!/bin/bash
-                 apt-get update && apt-get install -y docker-ce
-                 systemctl start docker
-                 usermod -aG docker ec2-user
-                 docker run -p 8080:8080 nginx
-              EOF
 }
- 
+/*
 resource "aws_instance" "myapp-server-two" {
   ami                         = data.aws_ami.amazon-linux-image.id
   instance_type               = var.instance_type
@@ -198,14 +133,24 @@ resource "aws_instance" "myapp-server-two" {
   availability_zone			      = var.avail_zone
 
   tags = {
-    Name = "${var.env_prefix}-server-two"
+    Name = "${var.env_prefix}-server"
+  }
+*/
+  /* provisioner "local-exec" {
+    working_dir = "../ansible"
+    command = "ansible-playbook --inventory ${self.public_ip}, --private-key ${var.ssh_key_private} --user ec2-user deploy-docker-new-user.yaml"
+  } 
+}
+*/
+/* 
+resource "null_resource" "configure_server" {
+  triggers = {
+    trigger = aws_instance.myapp-server.public_ip
   }
 
-  user_data = <<EOF
-                 #!/bin/bash
-                 apt-get update && apt-get install -y docker-ce
-                 systemctl start docker
-                 usermod -aG docker ec2-user
-                 docker run -p 8080:8080 nginx
-              EOF
+  provisioner "local-exec" {
+    working_dir = "../ansible"
+    command = "ansible-playbook --inventory ${aws_instance.myapp-server.public_ip}, --private-key ${var.ssh_key_private} --user ec2-user deploy-docker-new-user.yaml"
+  }
 }
+*/
