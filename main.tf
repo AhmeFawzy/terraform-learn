@@ -9,7 +9,7 @@ variable env_prefix {}
 variable instance_type {}
 variable ssh_key {}
 variable my_ip {}
-//variable ssh_key_private {}
+variable ssh_key_private {}
 
 data "aws_ami" "amazon-linux-image" {
   most_recent = true
@@ -121,7 +121,13 @@ resource "aws_instance" "myapp-server" {
   tags = {
     Name = "${var.env_prefix}-server"
   }
+   provisioner "local-exec" {
+    working_dir = "/mnt/c/Users/ahmed/IdeaProjects/learn-ansible"
+    command = "ansible-playbook --inventory ${self.public_ip}, --private-key ${var.ssh_key_private} --user ec2-user 4-deploy-docker-new-user.yaml"
+  } 
 }
+
+
 /*
 resource "aws_instance" "myapp-server-two" {
   ami                         = data.aws_ami.amazon-linux-image.id
@@ -135,14 +141,10 @@ resource "aws_instance" "myapp-server-two" {
   tags = {
     Name = "${var.env_prefix}-server"
   }
-*/
-  /* provisioner "local-exec" {
-    working_dir = "../ansible"
-    command = "ansible-playbook --inventory ${self.public_ip}, --private-key ${var.ssh_key_private} --user ec2-user deploy-docker-new-user.yaml"
-  } 
+
+  
 }
-*/
-/* 
+
 resource "null_resource" "configure_server" {
   triggers = {
     trigger = aws_instance.myapp-server.public_ip
