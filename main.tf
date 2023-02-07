@@ -6,10 +6,12 @@ variable vpc_cidr_block {}
 variable subnet_1_cidr_block {}
 variable avail_zone {}
 variable env_prefix {}
+variable env_prefix_2 {}
 variable instance_type {}
 variable ssh_key {}
 variable my_ip {}
 #variable ssh_key_private {}
+
 
 data "aws_ami" "amazon-linux-image" {
   most_recent = true
@@ -106,16 +108,19 @@ resource "aws_key_pair" "ssh-key" {
 }
 
 output "server-ip-one" {
-    value = aws_instance.myapp-server-one.public_ip
+    value = aws_instance.dev-myapp-server-one.public_ip
 }
 output "server-ip-two" {
-    value = aws_instance.myapp-server-two.public_ip
+    value = aws_instance.dev-myapp-server-two.public_ip
 }
 output "server-ip-three" {
-    value = aws_instance.myapp-server-three.public_ip
+    value = aws_instance.prod-myapp-server-one.public_ip
+}
+output "server-ip-four" {
+    value = aws_instance.prod-myapp-server-two.public_ip
 }
 
-resource "aws_instance" "myapp-server-one" {
+resource "aws_instance" "dev-myapp-server-one" {
   ami                         = data.aws_ami.amazon-linux-image.id
   instance_type               = var.instance_type
   key_name                    = "myapp-key"
@@ -125,28 +130,13 @@ resource "aws_instance" "myapp-server-one" {
   availability_zone			      = var.avail_zone
 
   tags = {
-    Name = "${var.env_prefix}-server-one"
+    Name = "${var.env_prefix}-server"
   }
 }
 
 
 
-resource "aws_instance" "myapp-server-two" {
-  ami                         = data.aws_ami.amazon-linux-image.id
-  instance_type               = var.instance_type
-  key_name                    = "myapp-key"
-  associate_public_ip_address = true
-  subnet_id                   = aws_subnet.myapp-subnet-1.id
-  vpc_security_group_ids      = [aws_security_group.myapp-sg.id]
-  availability_zone			      = var.avail_zone
-
-  tags = {
-    Name = "${var.env_prefix}-server-two"
-  }
-
-  
-}
-resource "aws_instance" "myapp-server-three" {
+resource "aws_instance" "dev-myapp-server-two" {
   ami                         = data.aws_ami.amazon-linux-image.id
   instance_type               = "t2.small"
   key_name                    = "myapp-key"
@@ -156,12 +146,41 @@ resource "aws_instance" "myapp-server-three" {
   availability_zone			      = var.avail_zone
 
   tags = {
-    Name = "${var.env_prefix}-server-three"
+    Name = "${var.env_prefix}-server"
   }
 
   
 }
+resource "aws_instance" "prod-myapp-server-one" {
+  ami                         = data.aws_ami.amazon-linux-image.id
+  instance_type               = var.instance_type
+  key_name                    = "myapp-key"
+  associate_public_ip_address = true
+  subnet_id                   = aws_subnet.myapp-subnet-1.id
+  vpc_security_group_ids      = [aws_security_group.myapp-sg.id]
+  availability_zone			      = var.avail_zone
 
+  tags = {
+    Name = "${var.env_prefix_2}-server"
+  }
+
+  
+}
+resource "aws_instance" "prod-myapp-server-two" {
+  ami                         = data.aws_ami.amazon-linux-image.id
+  instance_type               = "t2.small"
+  key_name                    = "myapp-key"
+  associate_public_ip_address = true
+  subnet_id                   = aws_subnet.myapp-subnet-1.id
+  vpc_security_group_ids      = [aws_security_group.myapp-sg.id]
+  availability_zone			      = var.avail_zone
+
+  tags = {
+    Name = "${var.env_prefix_2}-server"
+  }
+
+  
+}
 
 /*
 resource "null_resource" "configure_server" {
