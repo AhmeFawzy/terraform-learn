@@ -1,7 +1,7 @@
 provider "aws" {
     region = "us-east-1"
-    #access_key = "AKIAV6TNO4KJMB7SJUSH"  this should not be hardcorded
-    #secret_key = "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"  this should not be hardcorded
+    #access_key = ""  this should not be hardcorded
+    #secret_key = ""  this should not be hardcorded
 }
 
 variable "subnet_cidr_block" {
