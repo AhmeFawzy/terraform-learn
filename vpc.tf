@@ -10,7 +10,7 @@ data "aws_availability_zones" "azs" {}
 
 module "flokiapp-vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "3.18.1"
+  version = "2.64.0"
 
   name = "flokiapp-vpc"
   cidr = var.vpc_cidr_block
